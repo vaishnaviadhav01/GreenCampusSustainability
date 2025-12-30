@@ -1,4 +1,65 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Certificate</h2>
+
+<style>
+    .certificate-box {
+        width: 80%;
+        margin: auto;
+        padding: 40px;
+        border: 5px solid #2ecc71;
+        text-align: center;
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+    .certificate-box h1 {
+        color: #cc2e2e;
+        margin-bottom: 10px;
+    }
+
+    .certificate-box h3 {
+        margin: 20px 0;
+    }
+
+    .certificate-box p {
+        font-size: 18px;
+        margin: 10px 0;
+    }
+
+    .download-btn {
+        margin-top: 30px;
+        padding: 12px 25px;
+        background-color: #cc782e;
+        color: white;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+
+    .download-btn:hover {
+        background-color: #27ae60;
+    }
+</style>
+
+<div class="certificate-box">
+    <h1>Certificate of Achievement</h1>
+
+    <p>This is to certify that</p>
+
+    <h3><strong>{{ current_user.username }}</strong></h3>
+
+    <p>has successfully completed the</p>
+
+    <h3><strong>Green Campus Sustainability Quiz</strong></h3>
+
+    <p>and demonstrated excellent understanding of sustainability practices.</p>
+
+    <p><strong>Date:</strong> {{ current_date }}</p>
+
+    <button class="download-btn" onclick="window.print()">
+        Download Certificate
+    </button>
+</div>
+
 {% endblock %}

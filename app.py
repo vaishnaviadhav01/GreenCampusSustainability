@@ -1,10 +1,17 @@
-from flask import Flask, render_template, redirect, url_for, request, abort
+from flask import Flask, render_template, redirect, url_for, request, abort,flash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from models import db, User, ResourceUsage
+from models import db, User, ResourceUsage ,Quiz, QuizQuestion, QuizResult
 from datetime import datetime
 import io
 import matplotlib.pyplot as plt
 from flask import send_file
+import csv
+from werkzeug.utils import secure_filename
+
+
+
+
+
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "green-campus-secret"
@@ -89,11 +96,64 @@ def manage_users():
     admin_only()
     return render_template("admin/manage_users.html")
 
-@app.route("/admin/create-quiz")
+
+
+
+
+# ---------------- QUIZ MODULE (admin creating quiz)----------------
+
+# Admin creates quiz
+@app.route("/admin/create-quiz", methods=["GET", "POST"])
 @login_required
 def create_quiz():
     admin_only()
+    if request.method == "POST":
+        title = request.form["title"]
+        questions = request.form.getlist("question")
+        option_a = request.form.getlist("option_a")
+        option_b = request.form.getlist("option_b")
+        option_c = request.form.getlist("option_c")
+        option_d = request.form.getlist("option_d")
+        correct_answers = request.form.getlist("correct_answer")
+
+        # Deactivate old quizzes
+        Quiz.query.update({Quiz.is_active: False})
+        db.session.commit()
+
+        # Create new quiz
+        quiz = Quiz(title=title, is_active=True)
+        db.session.add(quiz)
+        db.session.commit()
+
+        for i in range(len(questions)):
+            q = QuizQuestion(
+                quiz_id=quiz.id,
+                question=questions[i],
+                option_a=option_a[i],
+                option_b=option_b[i],
+                option_c=option_c[i],
+                option_d=option_d[i],
+                correct_answer=correct_answers[i]
+            )
+            db.session.add(q)
+        db.session.commit()
+        flash("Quiz created successfully!", "success")
+        return redirect(url_for("create_quiz"))
     return render_template("admin/create_quiz.html")
+
+
+
+#----------------resourse_usage-------------------------
+
+
+def parse_date(date_str):
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(date_str.strip(), fmt).date()
+        except ValueError:
+            continue
+    return None
+
 
 @app.route("/admin/resource-usage", methods=["GET", "POST"])
 @login_required
@@ -101,23 +161,60 @@ def resource_usage():
     admin_only()
 
     if request.method == "POST":
+
+        # ---------- CSV UPLOAD ----------
+        if "csv_file" in request.files:
+            file = request.files["csv_file"]
+
+            if file.filename.endswith(".csv"):
+                stream = io.StringIO(file.stream.read().decode("UTF8"))
+                csv_reader = csv.DictReader(stream)
+
+                for row in csv_reader:
+                    date = parse_date(row["date"])
+                    if not date:
+                        continue   # skip invalid rows safely
+
+
+                    # Avoid duplicate dates
+                    if not ResourceUsage.query.filter_by(date=date).first():
+                        usage = ResourceUsage(
+                            date=date,
+                            electricity=float(row["electricity"]),
+                            water=float(row["water"]),
+                            waste=float(row["waste"])
+                        )
+                        db.session.add(usage)
+
+                db.session.commit()
+                flash("CSV file uploaded successfully!", "success")
+
+            return redirect(url_for("resource_usage"))
+
+        # ---------- DAILY MANUAL ENTRY ----------
         date = request.form["date"]
         electricity = request.form["electricity"]
         water = request.form["water"]
         waste = request.form["waste"]
 
-        usage = ResourceUsage(
-            date=datetime.strptime(date, "%Y-%m-%d").date(),
-            electricity=float(electricity),
-            water=float(water),
-            waste=float(waste)
-        )
+        if not ResourceUsage.query.filter_by(
+            date=datetime.strptime(date, "%Y-%m-%d").date()
+        ).first():
 
-        db.session.add(usage)
-        db.session.commit()
+            usage = ResourceUsage(
+                date=datetime.strptime(date, "%Y-%m-%d").date(),
+                electricity=float(electricity),
+                water=float(water),
+                waste=float(waste)
+            )
+
+            db.session.add(usage)
+            db.session.commit()
+
         return redirect(url_for("resource_usage"))
 
     return render_template("admin/resource_usage.html")
+
 
 @app.route("/admin/analytics")
 @login_required
@@ -167,11 +264,23 @@ def view_results():
     admin_only()
     return render_template("admin/view_results.html")
 
+
+
+# Admin sees top 3 students
 @app.route("/admin/top-students")
 @login_required
 def top_students():
     admin_only()
-    return render_template("admin/top_students.html")
+    top_results = (
+        db.session.query(User.username, db.func.sum(QuizResult.score).label("total_score"))
+        .join(QuizResult, User.id == QuizResult.user_id)
+        .group_by(User.id)
+        .order_by(db.desc("total_score"))
+        .limit(3)
+        .all()
+    )
+    return render_template("admin/top_students.html", top_results=top_results)
+
 
 # ---------- STUDENT ----------
 @app.route("/student/dashboard")
@@ -179,15 +288,55 @@ def top_students():
 def student_dashboard():
     return render_template("student/dashboard.html")
 
-@app.route("/student/attempt-quiz")
+
+
+# Student attempts quiz
+@app.route("/student/attempt-quiz", methods=["GET", "POST"])
 @login_required
 def student_attempt_quiz():
-    return render_template("student/attempt_quiz.html")
+    # Only active quiz
+    quiz = Quiz.query.filter_by(is_active=True).first()
+    if not quiz:
+        flash("No active quiz available.", "warning")
+        return redirect(url_for("student_dashboard"))
 
+    questions = QuizQuestion.query.filter_by(quiz_id=quiz.id).all()
+    if request.method == "POST":
+        score = 0
+        for q in questions:
+            selected = request.form.get(str(q.id))
+            if selected == q.correct_answer:
+                score += 1
+
+        # Save result
+        result = QuizResult(
+            user_id=current_user.id,
+            quiz_id=quiz.id,
+            score=score,
+            total=len(questions)
+        )
+        db.session.add(result)
+        db.session.commit()
+        flash(f"You scored {score} / {len(questions)}", "success")
+        return redirect(url_for("view_score"))
+
+    return render_template("student/attempt_quiz.html", quiz=quiz, questions=questions)
+
+
+
+
+
+
+# Student views score
 @app.route("/student/view-score")
 @login_required
 def view_score():
-    return render_template("student/view_score.html")
+    results = QuizResult.query.filter_by(user_id=current_user.id).all()
+    return render_template("student/view_score.html", results=results)
+
+
+
+
 
 @app.route("/student/upload-contribution")
 @login_required
@@ -197,7 +346,7 @@ def upload_contribution():
 @app.route("/student/certificate")
 @login_required
 def certificate():
-    return render_template("student/certificate.html")
+    return render_template("student/certificate.html",current_date=datetime.today().strftime("%d-%m-%Y"))
 
 # ---------- CHARTS ----------
 @app.route("/charts/<chart_name>")

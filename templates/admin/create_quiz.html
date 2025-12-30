@@ -1,4 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
 <h2>Create Quiz</h2>
+
+<form method="POST">
+    <label>Quiz Title:</label>
+    <input type="text" name="title" required>
+
+    <h3>Questions</h3>
+    <div id="questions-container">
+        <div class="question-block">
+            <input type="text" name="question" placeholder="Question" required>
+            <input type="text" name="option_a" placeholder="Option A" required>
+            <input type="text" name="option_b" placeholder="Option B" required>
+            <input type="text" name="option_c" placeholder="Option C" required>
+            <input type="text" name="option_d" placeholder="Option D" required>
+            <input type="text" name="correct_answer" placeholder="Correct Answer (A/B/C/D)" required>
+        </div>
+    </div>
+    <button type="button" onclick="addQuestion()">+ Add Another Question</button>
+    <br><br>
+    <button type="submit">Create Quiz</button>
+</form>
+
+<script>
+function addQuestion() {
+    const container = document.getElementById('questions-container');
+    const block = document.createElement('div');
+    block.classList.add('question-block');
+    block.innerHTML = `
+        <input type="text" name="question" placeholder="Question" required>
+        <input type="text" name="option_a" placeholder="Option A" required>
+        <input type="text" name="option_b" placeholder="Option B" required>
+        <input type="text" name="option_c" placeholder="Option C" required>
+        <input type="text" name="option_d" placeholder="Option D" required>
+        <input type="text" name="correct_answer" placeholder="Correct Answer (A/B/C/D)" required>
+    `;
+    container.appendChild(block);
+}
+</script>
+
 {% endblock %}
