@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    body {
+        background: url("{{ url_for('static', filename='images/dypatil_akurdi.jpg') }}")
+                    no-repeat center center fixed;
+        background-size: cover;
+    }
+
+    .login-box {
+        width: 350px;
+        margin: 100px auto;
+        padding: 30px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        text-align: center;
+    }
+
+    h2 {
+        color: green;
+        margin-bottom: 20px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+
+    button {
+        width: 100%;
+        padding: 10px;
+        background: green;
+        color: white;
+        border: none;
+        cursor: pointer;
+    }
+
+    a {
+        color: green;
+        text-decoration: none;
+        font-weight: bold;
+    }
+</style>
+
+<div class="login-box">
+    <h2>Green Campus Sustainability Tracker</h2>
+
+    <form method="post">
+        <input name="username" placeholder="Username" required>
+        <input name="password" type="password" placeholder="Password" required>
+        <button>Login</button>
+    </form>
+
+    <br>
+    <p>New user? <a href="{{ url_for('register') }}">Register here</a></p>
+
+    {% if error %}
+        <p style="color:red">{{ error }}</p>
+    {% endif %}
+</div>
+{% endblock %}
+

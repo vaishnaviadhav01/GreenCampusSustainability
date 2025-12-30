@@ -1,0 +1,33 @@
+
+
+{% extends "base.html" %}
+
+{% block content %}
+<h2 style="text-align:center;">Green Campus Sustainability Tracker</h2>
+<h3 style="text-align:center;">Register</h3>
+
+<form method="POST">
+    <input name="username" placeholder="Username" required>
+    <input name="password" type="password" placeholder="Password" required>
+    <button>Register</button>
+</form>
+
+<div class="link">
+    Already registered?
+    <a href="{{ url_for('login') }}">Login</a>
+</div>
+{% endblock %}
+
+
+
+
+
+
+
+
+
+
+
+
+
+

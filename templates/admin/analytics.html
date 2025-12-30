@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    /* CONTAINER */
+    .analytics-container {
+        padding: 40px 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 50px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .analytics-title {
+        text-align: center;
+        font-size: 36px;
+        font-weight: 700;
+        color: #1b5e20;
+    }
+
+    /* SUMMARY CARDS */
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 25px;
+    }
+
+    .summary-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 25px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        text-align: center;
+        border-top: 6px solid #2e7d32;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+
+    .summary-card h3 {
+        font-size: 18px;
+        color: #2e7d32;
+        margin-bottom: 10px;
+    }
+
+    .summary-card p {
+        font-size: 22px;
+        font-weight: 600;
+        color: #000;
+    }
+
+    /* CHARTS */
+    .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 35px;
+    }
+
+    .chart-box {
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    }
+
+    .chart-box h3 {
+        margin-bottom: 20px;
+        color: #1b5e20;
+        text-align: center;
+    }
+
+    .bar-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 25px;
+    }
+
+    /* DOWNLOAD BUTTON */
+    .download-section {
+        text-align: center;
+        margin-top: 40px;
+    }
+
+    .download-btn {
+        padding: 12px 30px;
+        background: linear-gradient(135deg, #1b5e20, #2e7d32);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .download-btn:hover {
+        opacity: 0.9;
+        transform: translateY(-2px);
+    }
+
+    /* RESPONSIVE ADJUSTMENTS */
+    @media (max-width: 768px) {
+        .analytics-container {
+            padding: 20px 10px;
+        }
+
+        .summary-card p {
+            font-size: 20px;
+        }
+
+        .chart-box {
+            padding: 20px;
+        }
+    }
+
+</style>
+
+<div class="analytics-container">
+
+    <h1 class="analytics-title">📊 Resource Usage Analytics</h1>
+
+    <!-- SUMMARY CARDS -->
+    <div class="summary-grid">
+        <div class="summary-card">
+            <h3>Total Electricity</h3>
+            <p>{{ total_electricity|default(0) }} kWh</p>
+        </div>
+        <div class="summary-card">
+            <h3>Total Water</h3>
+            <p>{{ total_water|default(0) }} Liters</p>
+        </div>
+        <div class="summary-card">
+            <h3>Total Bio Waste</h3>
+            <p>{{ total_waste|default(0) }} Kg</p>
+        </div>
+        <div class="summary-card">
+            <h3>Monthly Average</h3>
+            <p>{{ monthly_avg|default(0)|round(2) }}</p>
+        </div>
+    </div>
+
+    <!-- MAIN CHARTS -->
+    <div class="chart-grid">
+        <div class="chart-box">
+            <h3>Monthly Resource Usage</h3>
+            <canvas id="monthlyChart" height="160"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>Resource Distribution</h3>
+            <canvas id="pieChart" height="160"></canvas>
+        </div>
+    </div>
+
+    <!-- INDIVIDUAL BAR CHARTS -->
+    <div class="bar-grid">
+        <div class="chart-box">
+            <h3>Electricity Usage</h3>
+            <canvas id="electricityChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>Water Usage</h3>
+            <canvas id="waterChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>Bio Waste</h3>
+            <canvas id="wasteChart"></canvas>
+        </div>
+    </div>
+
+    <!-- DOWNLOAD -->
+    <div class="download-section">
+        <button class="download-btn">⬇ Download PDF Report</button>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const months = {{ months|tojson|safe }};
+    const electricity = {{ electricity|tojson|safe }};
+    const water = {{ water|tojson|safe }};
+    const waste = {{ waste|tojson|safe }};
+    const total_electricity = {{ total_electricity|default(0) }};
+    const total_water = {{ total_water|default(0) }};
+    const total_waste = {{ total_waste|default(0) }};
+
+    new Chart(document.getElementById("monthlyChart"), {
+        type: "line",
+        data: {
+            labels: months,
+            datasets: [
+                { label: "Electricity", data: electricity, borderColor: "#2e7d32", fill: false },
+                { label: "Water", data: water, borderColor: "#1565c0", fill: false },
+                { label: "Bio Waste", data: waste, borderColor: "#f57c00", fill: false }
+            ]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById("pieChart"), {
+        type: "pie",
+        data: {
+            labels: ["Electricity", "Water", "Bio Waste"],
+            datasets: [{ data: [total_electricity, total_water, total_waste], backgroundColor: ["#2e7d32","#1565c0","#f57c00"] }]
+        },
+        options: { responsive: true }
+    });
+
+    new Chart(document.getElementById("electricityChart"), {
+        type: "bar",
+        data: { labels: months, datasets: [{ label: "Electricity", data: electricity, backgroundColor: "#2e7d32" }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById("waterChart"), {
+        type: "bar",
+        data: { labels: months, datasets: [{ label: "Water", data: water, backgroundColor: "#1565c0" }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    new Chart(document.getElementById("wasteChart"), {
+        type: "bar",
+        data: { labels: months, datasets: [{ label: "Bio Waste", data: waste, backgroundColor: "#f57c00" }] },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+</script>
+
+{% endblock %}

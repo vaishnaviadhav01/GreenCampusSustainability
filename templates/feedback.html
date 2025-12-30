@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Submit Feedback</h2>
+<form method="POST">
+    <label>Feedback:</label><textarea name="feedback_text" required></textarea><br>
+    <button type="submit">Submit</button>
+</form>
+<h3>Your Feedback History</h3>
+<ul>
+    {% for fb in feedbacks %}
+        <li>{{ fb.feedback_text }} ({{ fb.submitted_on }})</li>
+    {% endfor %}
+</ul>
+{% endblock %}
